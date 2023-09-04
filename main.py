@@ -1,19 +1,20 @@
 import streamlit as st
 import functions as f
 import prompts
+from datetime import datetime, timedelta
 st.set_page_config(layout="wide")
 
 def main():
     st.title("Goal Setter/Helper Application")
     
     if "step" not in st.session_state:
-        st.session_state.step = "input_goal"
+        st.session_state.step = "initial_goal"
     
     st.write(f"Current Step: {st.session_state.step}")  #Debug message
 
-    if st.session_state.step == "input_goal":
-        input_goal()
-    elif st.session_state.step == "clarify_goal":
+    if st.session_state.step == "initial_goal": #what by when 
+        initial_goal()
+    elif st.session_state.step == "clarying_questions": #clarying questions
         clarify_goal()
     elif st.session_state.step == "confirm_goal":
         confirm_goal()
@@ -23,23 +24,48 @@ def main():
         dashboard()
     # Add more steps as needed
 
-def input_goal():
+def initial_goal():
     st.header("Goal Creation")
     initial_goal = st.text_input("What is your goal?")
+    
+    # Add a row of buttons for goal duration
+    durations = {
+        "1 month": timedelta(days=30),
+        "6 months": timedelta(days=180),
+        "1 year": timedelta(days=365),
+        "3 years": timedelta(days=3*365),
+        "5 years": timedelta(days=5*365)
+    }
+    
+    
+    # Show the date input box
+    if 'goal_deadline' not in st.session_state:
+        default_deadline = datetime.now()
+    else:
+        default_deadline = st.session_state.goal_deadline
 
-    # Adding a date picker for goal deadline
-    goal_deadline = st.date_input("By when would you like to achieve it?")
-    # Asking user how they'll measure the goal's completion
-    goal_measure = st.text_input("How will you measure the completion of your goal?")
+    goal_deadline = st.date_input("By when would you like to achieve it?", default_deadline)
+    # Create columns for the buttons
+    cols = st.columns(len(durations))
+
+    for idx, (duration, delta) in enumerate(durations.items()):
+        with cols[idx]:
+            if st.button(duration):
+                # When a button is pressed, adjust the goal_deadline by the selected duration
+                st.session_state.goal_deadline = datetime.now() + delta
+                st.experimental_rerun()
+
+
 
     if st.button('Submit'):
         st.session_state.initial_goal = initial_goal
         st.session_state.goal_deadline = goal_deadline
-        st.session_state.goal_measure = goal_measure
+
+        #goal structure so far: initial goal by when         
+        instructions, prompt = prompts.clarify_goal(st.session_state.initial_goal, st.session_state.goal_deadline)
         
-        instructions, prompt = prompts.clarify_goal(st.session_state.initial_goal, st.session_state.goal_deadline, st.session_state.goal_measure)
         st.session_state.response = f.call_api(instructions, prompt)
-        st.session_state.step = "clarify_goal"
+        st.session_state.step = "clarying_questions"
         st.experimental_rerun()
 
 def clarify_goal():

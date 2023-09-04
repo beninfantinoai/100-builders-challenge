@@ -1,4 +1,4 @@
-def clarify_goal(initial_goal, goal_deadline, goal_measure):
+def clarify_goal(initial_goal, goal_deadline):
     instructions = """
     You are a renowned expert in goal-setting and personal development, assisting individuals in creating clear, actionable, and achievable objectives.
     You are going to guide users in refining their goals using the principles of what makes a great goal.
@@ -6,18 +6,30 @@ def clarify_goal(initial_goal, goal_deadline, goal_measure):
 
     # Adjusting the prompt to account for the new details
     prompt = f"""
-    Given the initial goal from the user, your task is to help them clarify and refine it, making it more actionable and aligned with the 
-    principles of an effective goal. 
+    Given a user's initial goal, deadline, and method of measurement, generate three sequential, context-aware clarifying questions. For context:
 
-    You can ask up to 3 questions.
+    If the goal is related to 'Health & Fitness', such as 'I want to lose weight' with a deadline 'by the end of the year':
+    - A question could be 'How much do you currently weigh and what is your target weight?'
+    - Based on the answer, the next could be 'How much time per week will you dedicate to exercising?'
+    - And, 'Are you considering hiring a personal trainer within a budget of $100 - $200 per month?'
+
+    If the goal concerns 'Financial Security', like 'I want to save more money' in the next '6 months':
+    - A question could be 'How much do you currently have in savings and what's your target amount?'
+    - Depending on the reply, 'What expenses are you willing to cut down on or eliminate?'
+    - Lastly, 'Do you plan to seek financial advice or use budgeting tools?'
+
+    For 'Personal Development' goals such as 'I want to learn how to code' in '6 months':
+    - A possible question is 'What specifically do you wish to create – a website, mobile app, etc.?'
+    - Depending on the reply, 'Which programming languages do you want to learn?'
+    - Finally, 'How many hours a week are you planning to practise & study?'
+
+    Now, given the user's goal, deadline, and measure, please provide three contextually relevant questions.
 
     --Goal Information--
     The user's goal is: {initial_goal}
     The goal's deadline is: {goal_deadline}
-    The measure for the goal's completion is: {goal_measure}
 
-
-    Your output should help the user refine their goal, so it MUST look like:
+    -- Output Format --
     1. ... 
     2. ...
     3. ...
@@ -26,57 +38,46 @@ def clarify_goal(initial_goal, goal_deadline, goal_measure):
 
 
 
-def finalize_goal(goal, user_responses, feedback = None, regenerate=False):
+def finalize_goal(goal, user_responses, feedback=None, regenerate=False):
     instructions = """
-    You are a renowned expert in goal-setting and personal development, assisting individuals in creating clear, actionable, 
-    and achievable objectives. You are going to guide users in refining their goals using the principles of what makes a great goal.
+    As a renowned expert in goal-setting and personal development, your task is to assist individuals in refining their goals using key principles. Using the details provided, generate a clarified goal that embodies:
+    - Specificity: What exactly do they want to achieve?
+    - Measurability: How will they measure progress or know they've achieved it?
+    - Time-Bound: When do they plan to achieve it?
+
+    Below are the user's initial inputs, clarifying questions and answers, and any feedback if provided.
     """
 
     # Iterate through the clarification answers and format them
     clarifications = "\n".join([f"{question}: {answer}" for question, answer in user_responses.items()])
 
-    # Constructing the prompt for your Goal Setter/Helper application
-    if not regenerate:
-        prompt = f"""
-        You will receive the first iteration of a goal from the user as well as clarifying questions and answers from the user. Given the user's first iteration goal and their answers to your questions please create a finalize goal for them. 
+    base_prompt = """
+    EXAMPLE:
+    Given a user's goal to "travel more", clarifications might include:
+    - Desired destinations: Europe and Asia
+    - Frequency: 4 times a year
+    A refined goal could be: "Travel to Europe and Asia 4 times within the next year."
 
-        The goal should be:
-            - Specific - What?
-            - Measurable - How much?
-            - Time-Bound - By when?   
+    --Goal Information--
+    {goal_info}
 
-        --Goal Information--
-        {goal}
+    --Clarifying Questions and Answers--
+    {clarifications}
+    """
 
-        --Clarifying Questions and Answers--
-        {clarifications}
-
-        The response should be as follows: 
-        Clarified goal: 'clarified goal'
-        """
-    elif regenerate:
-        prompt = f"""
-        You will receive the an iteration of a goal from the user as well as clarifying questions and answers and feedback regarding their previous goal from the user. Given the user's first iteration goal and their answers to your questions please create a finalize goal for them. 
-
-        The goal should be:
-            - Specific - What?
-            - Measurable - How much?
-            - Time-Bound - By when?
-
-        --Previous Goal--
-        {goal}
-
-        --Clarifying Questions and Answers--
-        {clarifications}
-
+    if regenerate:
+        base_prompt += """
         --Feedback--
         {feedback}
-
-        The response should be as follows: 
-        Clarified goal: 'clarified goal'
         """
 
-    # After formatting, we put back the initial goal into user_responses
+    base_prompt += "\nYour task is to provide:\nClarified goal: 'clarified goal'"
+
+    prompt = base_prompt.format(
+        goal_info=goal if not regenerate else f"Previous Goal: {goal}",
+        clarifications=clarifications,
+        feedback=feedback if regenerate else ""
+    )
 
     return instructions, prompt
 
