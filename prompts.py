@@ -81,22 +81,55 @@ def finalize_goal(goal, user_responses, feedback=None, regenerate=False):
 
     return instructions, prompt
 
+def additional_context(goal, context=None):
+    instructions = """
+    You are a proficient goal-setting strategist, known for extracting precise details from individuals. Your job is to guide the users by asking them strategic questions about their goal. These questions will aid in refining their goals, giving them clarity and specificity. Your process is iterative; you ask one question, and based on the user's reply, you ask the subsequent question.
+    
+    As an illustration:
+    For the goal "Start a business to make a million dollars in 3 years", you might ask:
+    1. "What kind of business are you considering?"
+    - If the answer is 'unsure', the next might be "What are your hobbies or interests?"
+    - Based on an answer like 'powerlifting', further inquiry could be, "Have you thought about coaching or opening a related store?"
+    ... and so on until a clearer picture emerges.
+    
+    Given the user's initial goal and any context, devise the next sequential, context-aware clarifying question.
+    """
+
+    # Base prompt format
+    base_prompt = """
+    Given the user's goal of "{goal}", and the context provided, what would be the next clarifying question you would ask to help them refine their objective?
+
+    --Goal Information--
+    {goal}
+    """
+    
+    # If context is provided, update the base prompt to include it
+    if context:
+        base_prompt += """
+        --Context--
+        {context}
+        """
+        
+    prompt = base_prompt.format(goal=goal, context=context)
+
+    return instructions, prompt
+
 def create_longterm_plan(goal):
     instructions = """
-    You are a strategic planning specialist, adept at designing both visionary long-term blueprints and actionable short-term roadmaps to guide 
-    individuals seamlessly towards their desired outcomes.
+    You're a strategic planner, skilled at devising high-level steps to guide individuals towards achieving their objectives.
 
-    Given a user's finalized goal, please create a structured long term plan for them. Consider the best practices for creating a long-term plan and its key components.
+    Given a user's goal and deadline, outline the primary steps they'd need to take. At this stage, focus on broad steps; detailed sub-tasks will be added later. Start with the most immediate step and progress towards the completion of the goal.
 
-    If there's no timeframe specified, devise a reasonable one. Always start with the immediate next step the user should take.
-
-    Ensure each step begins on a new line and follows this format:
-    - Timeframe (e.g., Month 1): Action/Task
+    Example:
+    For a goal like "Create a website in 6 months using Python", steps might be:
+    - Learn the language (only if not already proficient)
+    - Design the front end
+    - Develop the backend
+    - Test the website
+    - Deploy the website
     """
 
     prompt = f"""
-    {instructions}
-
     --Goal Information--
     {goal}
     """

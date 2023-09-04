@@ -18,8 +18,8 @@ def main():
         clarify_goal()
     elif st.session_state.step == "confirm_goal":
         confirm_goal()
-    elif st.session_state.step == "longterm_plan":
-        longterm_plan()
+    elif st.session_state.step == "additonal_context":
+        additional_context()
     elif st.session_state.step == "dashboard":
         dashboard()
     # Add more steps as needed
@@ -102,21 +102,49 @@ def confirm_goal():
 
     if st.button('Confirm'):
         st.session_state.finalized_goal = goal
-        st.session_state.step = "longterm_plan"
-        instructions, prompt = prompts.create_longterm_plan(st.session_state.finalized_goal)
-        st.session_state.response = f.call_api(instructions, prompt)
+        st.session_state.step = "additonal_context"
+        instructions, prompt = prompts.additional_context(st.session_state.finalized_goal)
         st.experimental_rerun() 
 
-def longterm_plan():
-    st.header("Longterm Plan")
-    st.session_state.longterm_plan = st.session_state.response['choices'][0]['message']['content']
-    st.write(st.session_state.longterm_plan)
+def additional_context():
+    st.header("Additional Context")
 
-    if st.button('Confirm'):
-        st.session_state.step = "dashboard"
-        instructions, prompt = prompts.create_shortterm_plan(st.session_state.longterm_plan)
+    # Initializing the question counter and questions storage if not present
+    if "question_number" not in st.session_state:
+        st.session_state.question_number = 1
+        st.session_state.dialogue = ""
+
+    # Get the finalized goal to provide as input to the prompt function
+    goal = st.session_state.finalized_goal
+
+    # If the current question isn't loaded or we're starting fresh, get a new one
+    if "current_question" not in st.session_state or st.session_state.question_number == 1:
+        # Use the goal and current dialogue to get the next question
+        instructions, prompt = prompts.additional_context(goal, st.session_state.dialogue)
+    
         st.session_state.response = f.call_api(instructions, prompt)
-        st.experimental_rerun() 
+        st.session_state.current_question = st.session_state.response['choices'][0]['message']['content']
+
+    # Display the current question and capture the user's answer
+    answer = st.text_input(st.session_state.current_question)
+
+    # If user answers and clicks on "Next Question" or "Confirm" if it's the last question
+    if st.button("Next Question" if st.session_state.question_number < 5 else "Confirm"):
+        # Append the question and answer to the dialogue
+        st.session_state.dialogue += "\nQ: " + st.session_state.current_question + "\nA: " + answer
+
+        # If there are more questions, increment the counter and clear the current_question so a new one is loaded
+        if st.session_state.question_number < 5:
+            st.session_state.question_number += 1
+            del st.session_state.current_question
+            st.experimental_rerun()
+        else:
+            # All questions answered, store the dialogue in the 'additional_context'
+            st.session_state.additional_context = st.session_state.dialogue
+            st.session_state.step = "dashboard"
+            st.experimental_rerun()
+
+
 
 def dashboard():
 
